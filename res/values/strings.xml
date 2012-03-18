@@ -1,7 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="hello">Hello World, AutoSilencerActivity!</string>
     <string name="app_name">AutoSilencer</string>
+    
+    <string name="currentState">Current State: -put here-</string>
+	<string name="nextEvent">Next Event: -put here-</string>
+	<string name="viewUpEvents">View Upcoming Events</string>
+	<string name="addCalendarEvent">Add Calendar Event</string>
+	<string name="settings">Settings</string>
+	<string name="mainMenuTitle">AutoSilencer</string>
+	
+	<string-array name="pollingTimesArray">
+        <item>1 Minute</item>
+        <item>5 Minutes</item>
+        <item>10 Minutes</item>
+        <item>15 Minutes</item>
+        <item>30 Minutes</item>
+        <item>1 Hour</item>
+        <item>3 Hours</item>
+    </string-array>
+    
+	<string-array name="eventVolume">
+        <item>Low Volume</item>
+        <item>Vibrate</item>
+        <item>Silent</item>
+    </string-array>
 
 </resources>

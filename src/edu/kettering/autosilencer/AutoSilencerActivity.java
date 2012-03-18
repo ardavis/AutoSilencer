@@ -1,12 +1,17 @@
 package edu.kettering.autosilencer;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 
 import android.app.Activity;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.text.format.DateUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -14,35 +19,28 @@ import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.ContentResolver;
+import android.content.ContentUris;
+import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 
-class MyCalendar {
-	public String name;
-	public String id;
-	
-	// Default Constructor
-	public MyCalendar(String _name, String _id) {
-		name = _name;
-		id = _id;
-	}
-	
-	// When calling toString, only return the name of the Calendar
-	@Override
-	public String toString() {
-		return name;
-	}
-}
+
 
 public class AutoSilencerActivity extends Activity {
 	
-	/*
-	 * UI Methods
-	 */
-	private Spinner m_spinner_calendar;
-	private Button m_button_add;
-	private Button m_button_getEvents;
-	private TextView m_text_event;
+	// Global Variables
+	
+	// UI Methods
+	private TextView upcomingEventsText;
+	private ArrayList<Event> events = new ArrayList<Event>();
+	private Event nextEvent;
+	
+	private Button addButton;
+	
+	private final static int INTERVAL = 1000 * 4;	// 4 seconds
+	private Handler handler;
+	private Runnable handlerTask;
 	
     /** Called when the activity is first created. */
     @Override
@@ -51,36 +49,41 @@ public class AutoSilencerActivity extends Activity {
         setContentView(R.layout.main);
         
         // Get Calendar List and Populate the View
-        getCalendars();
-        populateCalendarSpinner();
-        populateAddBtn();
-        populateTextEvent();
-        populateGetEventsBtn();
+//        getUpcomingEvents(this);
+//        populateTextEvent();
+//        prepareAddButton();
+        
+        handler = new Handler();
+        startRepeatingTask();
+          
     }
     
-    private void populateCalendarSpinner() {
-    	m_spinner_calendar = (Spinner) findViewById(R.id.spinner_calendar);
-    	ArrayAdapter<?> l_arrayAdapter = new ArrayAdapter(this.getApplicationContext(), android.R.layout.simple_spinner_item, m_calendars);
-    	l_arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-    	
-    	m_spinner_calendar.setAdapter(l_arrayAdapter);
-    	m_spinner_calendar.setSelection(0);
-    	m_spinner_calendar.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-
-			@Override
-			public void onItemSelected(AdapterView<?> p_parent, View p_view, int p_pos, long p_id) {
-				m_selectedCalendarId = m_calendars[(int)p_id].id;
-			}
-
-			@Override
-			public void onNothingSelected(AdapterView<?> arg0) {}
-		});
+    public void startRepeatingTask()
+    {
+    	// Do something long
+    			Runnable runnable = new Runnable() {
+    				@Override
+    				public void run() {  						
+    						handler.postDelayed(new Runnable() {
+    							@Override
+    							public void run() {
+    								Toast.makeText(getApplicationContext(), "IT WORKS!", Toast.LENGTH_SHORT).show();
+    							}
+    						},
+							INTERVAL);    				
+    				}
+    			};
+    			new Thread(runnable).start();
     }
     
-    private void populateAddBtn() {
-    	m_button_add = (Button) findViewById(R.id.button_add);
-    	m_button_add.setOnClickListener(new View.OnClickListener() {
-
+    public void stopRepeatingTask()
+    {
+    	handler.removeCallbacks(handlerTask);
+    }
+    
+    private void prepareAddButton() {
+    	addButton = (Button) findViewById(R.id.addCalendarEvent);
+    	addButton.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View v) {
 				addEvent();
@@ -89,110 +92,103 @@ public class AutoSilencerActivity extends Activity {
     	});
     }
     
-    private void populateGetEventsBtn() {
-    	m_button_getEvents = (Button) findViewById(R.id.button_get_events);
-    	m_button_getEvents.setOnClickListener(new View.OnClickListener() {
-			
-			@Override
-			public void onClick(View v) {
-				getLastThreeEvents();
-				
-			}
-		});
+    private void addEvent() {
+    	Intent intent = new Intent(Intent.ACTION_EDIT);
+    	intent.setType("vnd.android.cursor.item/event");
+    	intent.putExtra("title", "Andy Calendar Tutorial Test");
+    	intent.putExtra("description", "This is a simple test for Calendar API");
+    	intent.putExtra("eventLocation", "@home");
+    	intent.putExtra("beginTime", System.currentTimeMillis());
+    	intent.putExtra("endTime", System.currentTimeMillis() + 1800*1000);
+    	intent.putExtra("allDay", 0);	
+    	intent.putExtra("eventStatus", 1); // Status: 0 - Tentative, 1 - Confirmed, 2 - Cancelled
+    	intent.putExtra("visibility", 0); // Visibility: 0 - Default, 1 - Confidential, 2 - Private, 3 - Public
+    	intent.putExtra("transparency", 0); // Transparency: 0 - Opaque (No Timing Conflict Allowed), 1 - Transparent (Allow Overlap of Scheduling)
+    	intent.putExtra("hasAlarm", 1); // Alarm: 0 - False, 1 - True
+    	
+    	try {
+    		startActivity(intent); 
+    	} catch (Exception e) {
+    		Toast.makeText(this.getApplicationContext(), "Sorry, no compatible calendar is found!", Toast.LENGTH_LONG).show();
+    	}
     }
     
     private void populateTextEvent() {
-    	m_text_event = (TextView) findViewById(R.id.text_event);
-    	String l_str = 
-    			"Title: Blah Blah\n" +
-				"Description: Blah Blah\n" +
-				"Event Location: Blah\n" +
-				"Start Time: " + getDateTimeStr(0) + "\n" +
-				"End Time: " + getDateTimeStr(30) + "\n" +
-				"Event Status: Blah\n" +
-				"All Day: Blah\n" +
-				"Has Alarm: Blah\n";
-    	m_text_event.setText(l_str);
+//    	upcomingEventsText = (TextView) findViewById(R.id.text_event);
+//    	String l_str = 
+//    			"Title: " + nextEvent.title() + "\n" + 
+//				"Description: " + nextEvent.description() + "\n" + 
+//				"Event Location: " + nextEvent.location() + "\n" +
+//				"Start Time: " + getDateTimeStr(0) + "\n" +
+//				"End Time: " + getDateTimeStr(30) + "\n" +
+//				"All Day: " + nextEvent.isAllDay() + "\n";
+//    	upcomingEventsText.setText(l_str);
     }
     
     
     /*
      * Data Methods
      */
-	private MyCalendar m_calendars[];
-	private String m_selectedCalendarId = "0";
-	
-    private void getCalendars() {
-    	String[] l_projection = new String[]{"_id", "displayName"};
-    	Uri l_calendars = Uri.parse("content://com.android.calendar/calendars");
+    
+    private void getUpcomingEvents(Context context) {
+    	ContentResolver contentResolver = context.getContentResolver();
     	
-    	Cursor l_managedCursor = this.managedQuery(l_calendars, l_projection, null, null, null); // All Calendars
+    	// Fetch a list of all calendars on the device,
+    	// display their names and whether the user has
+    	// them selected for the display
     	
-    	if (l_managedCursor.moveToFirst()) {
-    		m_calendars = new MyCalendar[l_managedCursor.getCount()];
-    		String l_calName;
-    		String l_calId;
-    		int l_cnt = 0;
-    		int l_nameCol = l_managedCursor.getColumnIndex(l_projection[1]);
-    		int l_idCol = l_managedCursor.getColumnIndex(l_projection[0]);
+    	Uri uri = Uri.parse("content://com.android.calendar/calendars");
+    	String[] projection = new String[]{"_id", "displayName", "selected"};
+    	final Cursor cursor = contentResolver.query(uri, projection, null, null, null);
+    	
+    	HashSet<String> calendarIds = new HashSet<String>();
+    	
+    	while (cursor.moveToNext())
+    	{
+    		final String _id = cursor.getString(0);
+    		final String displayName = cursor.getString(1);
+    		final Boolean selected = !cursor.getString(2).equals("0");
     		
-    		do {
-    			l_calName = l_managedCursor.getString(l_nameCol);
-    			l_calId = l_managedCursor.getString(l_idCol);
-    			m_calendars[l_cnt] = new MyCalendar(l_calName, l_calId);
-    			++l_cnt;
-    		} while (l_managedCursor.moveToNext());
+    		System.out.println("ID: " + _id);
+    		System.out.println("Display Name: " + displayName);
+    		System.out.println("Selected: " + selected);
+    		
+    		calendarIds.add(_id);
     	}
+
+    	// For each calendar, display all the events for the next week.
+    	for (String id : calendarIds)
+    	{
+	    	//Uri.Builder builder = Uri.parse("content://com.android.calendar/events/instances/when").buildUpon();
+	    	Uri.Builder builder = Uri.parse("content://com.android.calendar/instances/when").buildUpon();
+    		long now = new Date().getTime();
+	    	//ContentUris.appendId(builder, now + (4 * DateUtils.WEEK_IN_MILLIS));
+	    	ContentUris.appendId(builder, now - DateUtils.WEEK_IN_MILLIS);
+			ContentUris.appendId(builder, now + DateUtils.WEEK_IN_MILLIS);
+	    	
+	    	String[] eventProjection = new String[]{"title", "dtstart", "dtend", "allDay"};
+	    	String eventSelection = "calendar_id=" + id;
+	    	String eventOrder = "dtstart ASC, dtend ASC";
+	    	Cursor eventCursor = contentResolver.query(builder.build(), eventProjection, eventSelection, null, eventOrder);
+	    	
+	    	while (eventCursor.moveToNext())
+	    	{
+	    		final String title = eventCursor.getString(0);
+	    		final Date begin = new Date(eventCursor.getLong(1));
+	    		final Date end = new Date(eventCursor.getLong(2));
+	    		final Boolean allDay = !eventCursor.getString(3).equals("0");
+	    		
+	    		Event newEvent = new Event(title, begin, end);
+	    		
+	    		// Add the event to the HashSet
+	    		events.add(newEvent);
+	    	}
+    	}
+    	
+    	nextEvent = events.get(0);
     }
     
-    private void addEvent() {
-    	Intent l_intent = new Intent(Intent.ACTION_EDIT);
-    	l_intent.setType("vnd.android.cursor.item/event");
-    	l_intent.putExtra("title", "Andy Calendar Tutorial Test");
-    	l_intent.putExtra("description", "This is a simple test for Calendar API");
-    	l_intent.putExtra("eventLocation", "@home");
-    	l_intent.putExtra("beginTime", System.currentTimeMillis());
-    	l_intent.putExtra("endTime", System.currentTimeMillis() + 1800*1000);
-    	l_intent.putExtra("allDay", 0);	
-    	l_intent.putExtra("eventStatus", 1); // Status: 0 - Tentative, 1 - Confirmed, 2 - Cancelled
-    	l_intent.putExtra("visibility", 0); // Visibility: 0 - Default, 1 - Confidential, 2 - Private, 3 - Public
-    	l_intent.putExtra("transparency", 0); // Transparency: 0 - Opaque (No Timing Conflict Allowed), 1 - Transparent (Allow Overlap of Scheduling)
-    	l_intent.putExtra("hasAlarm", 1); // Alarm: 0 - False, 1 - True
-    	
-    	try {
-    		startActivity(l_intent); 
-    	} catch (Exception e) {
-    		Toast.makeText(this.getApplicationContext(), "Sorry, no compatible calendar is found!", Toast.LENGTH_LONG).show();
-    	}
-    }
     
-    private void getLastThreeEvents() {
-    	Uri l_eventUri = Uri.parse("content://com.android.calendar/events");
-    	String[] l_projection = new String[]{"title", "dtstart", "dtend"};
-    	Cursor l_managedCursor = this.managedQuery(l_eventUri, l_projection, "calendar_id=" + m_selectedCalendarId, null, "dtstart DESC, dtend DESC");
-    	
-    	if (l_managedCursor.moveToFirst()) {
-    		int l_cnt = 0;
-    		String l_title;
-    		String l_begin;
-    		String l_end;
-    		StringBuilder l_displayText = new StringBuilder();
-    		int l_colTitle = l_managedCursor.getColumnIndex(l_projection[0]);
-    		int l_colBegin = l_managedCursor.getColumnIndex(l_projection[1]);
-    		int l_colEnd = l_managedCursor.getColumnIndex(l_projection[1]);
-    		
-    		do {
-    			l_title = l_managedCursor.getString(l_colTitle);
-    			l_begin = getDateTimeStr(l_managedCursor.getString(l_colBegin));
-    			l_end = getDateTimeStr(l_managedCursor.getString(l_colEnd));
-    			l_displayText.append(l_title + "\n" + l_begin + "\n" + l_end + "\n---------------\n");
-    			++l_cnt;
-    		} while (l_managedCursor.moveToNext() && l_cnt < 3);
-    		
-    		m_text_event.setText(l_displayText.toString());
-    	}
-    	
-    }
     
     /*
 	 * Utility Methods
