@@ -12,69 +12,81 @@
       	android:layout_height="wrap_content"
         android:src="@drawable/auto_silencer_logo" />
 	
-    <TextView
-        android:id="@+id/currentState"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/currentState" 
-        android:gravity="center" 
-        android:layout_marginBottom="10dp"/>
-	
-    <TextView
-        android:id="@+id/nextEvent"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/nextEvent" 
-        android:gravity="center" 
-        android:layout_marginBottom="15dp"/>
+   	<LinearLayout
+   	    android:layout_width="match_parent"
+   	    android:layout_height="wrap_content"
+   	    android:orientation="horizontal"
+   	    android:layout_marginBottom="10dp" >
+   	    
+   		<TextView
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="3"
+	        android:text="@string/currentState" 
+	        android:gravity="right"
+	        android:textSize="15dp"
+	        android:textColor="@color/menu_text_color" />
+   		
+   		<TextView
+	        android:id="@+id/currentState"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="2"
+	        android:gravity="left"
+	        android:text="Vibrate" 
+	        android:textSize="15dp"
+	        android:layout_marginLeft="15dp"
+	        android:textColor="@color/menu_text_color" />
+   			    
+   	</LinearLayout>
+    
+	<LinearLayout
+   	    android:layout_width="match_parent"
+   	    android:layout_height="wrap_content"
+   	    android:orientation="horizontal"
+   	    android:layout_marginBottom="20dp" >
+   		
+	    <TextView
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="3"
+	        android:text="@string/nextEvent" 
+	        android:gravity="right" 
+	        android:textSize="15dp"
+	        android:textColor="@color/menu_text_color" />
+	    
+	    <TextView
+	        android:id="@+id/nextEvent"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="2"
+	        android:gravity="left"
+	        android:layout_marginLeft="15dp" 
+	        android:textSize="15dp"
+	        android:textColor="@color/menu_text_color" />
 
+	</LinearLayout>
+	
     <ToggleButton
         android:id="@+id/enableDisable"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
         android:textOff="Disabled"
-        android:textOn="Enabled" 
-        android:padding="30dp"
-        android:layout_marginBottom="10dp" 
-        android:gravity="center" 
-        android:background="@drawable/toggle_state_background"
-        android:textColor="@drawable/toggle_state_text_color" />
+        android:textOn="Enabled"
+        android:checked="true"
+        style="@style/enable_disable_btn" />
 
     <Button
         android:id="@+id/viewUpEvents"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/viewUpEvents" 
-        android:gravity="center" 
-        android:layout_gravity="center" 
-        android:layout_marginBottom="10dp" 
-        android:layout_marginTop="10dp"
-        android:padding="10dp"
-        android:background="@drawable/blue_button_states"/>
-	  
+        android:text="@string/viewUpEvents"
+        style="@style/main_menu_btn" />
+    	  
     <Button
         android:id="@+id/addCalendarEvent"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
         android:text="@string/addCalendarEvent" 
-        android:gravity="center" 
-        android:layout_gravity="center" 
-        android:layout_marginBottom="10dp" 
-        android:layout_marginTop="10dp" 
-        android:padding="10dp"
-        android:background="@drawable/blue_button_states" />
+        style="@style/main_menu_btn" />
 	    
     <Button
         android:id="@+id/settings"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
         android:text="@string/settings" 
-        android:gravity="center" 
-        android:layout_gravity="center" 
-        android:layout_marginBottom="10dp" 
-        android:layout_marginTop="10dp" 
-        android:padding="10dp"
-        android:background="@drawable/blue_button_states" />
+        style="@style/main_menu_btn" />
 	
 </LinearLayout>

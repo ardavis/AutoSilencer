@@ -33,6 +33,7 @@ public final class R {
         public static final int red_gradientE=0x7f040003;
         public static final int red_gradientS=0x7f040002;
         public static final int red_stroke=0x7f040001;
+        public static final int white=0x7f040012;
     }
     public static final class drawable {
         public static final int auto_silencer_logo=0x7f020000;
@@ -60,10 +61,14 @@ public final class R {
         public static final int currentState=0x7f050001;
         public static final int mainMenuTitle=0x7f050006;
         public static final int nextEvent=0x7f050002;
+        public static final int normal=0x7f050009;
         public static final int settings=0x7f050005;
+        public static final int silent=0x7f050008;
+        public static final int vibrate=0x7f050007;
         public static final int viewUpEvents=0x7f050003;
     }
     public static final class style {
+        public static final int enable_disable_btn=0x7f070002;
         public static final int main_menu=0x7f070000;
         public static final int main_menu_btn=0x7f070001;
     }

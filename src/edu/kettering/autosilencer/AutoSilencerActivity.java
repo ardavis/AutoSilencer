@@ -7,18 +7,21 @@ import java.util.Date;
 import java.util.HashSet;
 
 import android.app.Activity;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
@@ -29,18 +32,46 @@ import android.database.Cursor;
 
 public class AutoSilencerActivity extends Activity {
 	
-	// Global Variables
+	// Finals
+	final boolean ENABLED  = true;
+	final boolean DISABLED = false;
 	
-	// UI Methods
+	// Thread
+	private volatile Thread runner;
+	
+	// Global Variables
+	SimpleDateFormat simpleDateFormat = new SimpleDateFormat("EEE, MMM dd hh:mm aaa");
+	
 	private TextView upcomingEventsText;
+	private TextView currentStateLabel;
+	private TextView nextEventLabel;
+	
 	private ArrayList<Event> events = new ArrayList<Event>();
 	private Event nextEvent;
 	
 	private Button addButton;
 	
-	private final static int INTERVAL = 1000 * 4;	// 4 seconds
+	private ToggleButton toggleButton;
+	
+	private Date lastQueryAt;
+	
+	private final static int INTERVAL = 1000 * 5;	// 4 seconds
 	private Handler handler;
-	private Runnable handlerTask;
+	private Runnable handlerTask = new Runnable()
+	{
+		@Override
+		public void run() {
+			// Check if current time is equal to the next event time
+			checkForEvent();
+			//Toast.makeText(getApplicationContext(), "Is it time yet?", Toast.LENGTH_SHORT).show();
+			handler.postDelayed(handlerTask, INTERVAL);
+		}
+	};
+	
+	private Boolean isEnabled = true;
+	
+	// Audio Manager
+	AudioManager am;
 	
     /** Called when the activity is first created. */
     @Override
@@ -48,32 +79,102 @@ public class AutoSilencerActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         
-        // Get Calendar List and Populate the View
-//        getUpcomingEvents(this);
-//        populateTextEvent();
-//        prepareAddButton();
+        setupAudioManager();
+        setupInitialState();
+        
+        getUpcomingEvents(this);
+        
+        prepareToggleButton();
+        prepareAddButton();
         
         handler = new Handler();
-        startRepeatingTask();
+        
+        startCheckingForEvents();
           
     }
     
-    public void startRepeatingTask()
+    public void setupInitialState()
     {
-    	// Do something long
-    			Runnable runnable = new Runnable() {
-    				@Override
-    				public void run() {  						
-    						handler.postDelayed(new Runnable() {
-    							@Override
-    							public void run() {
-    								Toast.makeText(getApplicationContext(), "IT WORKS!", Toast.LENGTH_SHORT).show();
-    							}
-    						},
-							INTERVAL);    				
-    				}
-    			};
-    			new Thread(runnable).start();
+    	// Current Volume State of the Device
+    	currentStateLabel = (TextView) findViewById(R.id.currentState);
+    	switch(am.getRingerMode())
+    	{
+    		case AudioManager.RINGER_MODE_VIBRATE:
+    			currentStateLabel.setText(R.string.vibrate);
+    			break;
+    		
+    		case AudioManager.RINGER_MODE_SILENT:
+    			currentStateLabel.setText(R.string.silent);
+    			break;
+    			
+    		case AudioManager.RINGER_MODE_NORMAL:
+    			currentStateLabel.setText(R.string.normal);
+    			break;
+    			
+    		default:
+    			break;
+    		
+    	}
+    	
+    	// Next Event
+    	nextEventLabel = (TextView) findViewById(R.id.nextEvent);
+    	nextEventLabel.setText(simpleDateFormat.format(new Date()));
+    	
+    	// Enabled or Disabled
+    	toggleButton = (ToggleButton) findViewById(R.id.enableDisable);
+    	toggleButton.setEnabled(isEnabled);
+    }
+    
+    public void setupAudioManager()
+    {
+    	am = (AudioManager) getBaseContext().getSystemService(Context.AUDIO_SERVICE);
+    }
+    
+    public void startCheckingForEvents()
+    {
+    	handlerTask.run();
+    }
+    
+    public void stopCheckingForEvents()
+    {
+    	handler.removeCallbacks(handlerTask);
+    }
+    
+    public void checkForEvent()
+    {
+    	Date currentTime = new Date();
+    	System.out.println("Current Time: " + currentTime.getTime());
+    	System.out.println("Next Event Time: " + simpleDateFormat.format(nextEvent.beginTime()));
+    	if (currentTime.getTime() > nextEvent.beginTime().getTime() && !events.isEmpty())
+    	{
+    		if (events.get(0) == nextEvent)
+    		{
+    			// Remove the "nextEvent" so another can take it's place
+    			events.remove(0);
+    		}
+    		getUpcomingEvents(AutoSilencerActivity.this);
+    		Toast.makeText(getApplicationContext(), "Checking for Events!", Toast.LENGTH_SHORT).show();
+    	}
+    	else
+    	{
+    		Toast.makeText(getApplicationContext(), "Next Event: " + simpleDateFormat.format(nextEvent.beginTime()), Toast.LENGTH_SHORT).show();
+    	}
+    }
+    
+    // Set the phone to vibrate
+    public void vibrate()
+    {
+    	am.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
+    	currentStateLabel.setText(R.string.vibrate);
+    	// Change the text of the main menu current state
+    }
+    
+    // Set the phone to silent
+    public void silent()
+    {
+    	am.setRingerMode(AudioManager.RINGER_MODE_SILENT);
+    	currentStateLabel.setText(R.string.silent);
+    	// Change the text of the main menu current state
     }
     
     public void stopRepeatingTask()
@@ -92,6 +193,30 @@ public class AutoSilencerActivity extends Activity {
     	});
     }
     
+    private void prepareToggleButton() {
+    	toggleButton = (ToggleButton) findViewById(R.id.enableDisable);
+    	toggleButton.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				if (toggleButton.isChecked()) {
+					isEnabled = true;
+					startCheckingForEvents();
+					// Testing
+					vibrate();
+					Toast.makeText(getApplicationContext(), "Vibrate", Toast.LENGTH_SHORT).show();
+				}
+				else {
+					isEnabled = false;
+					stopCheckingForEvents();
+					// Testing
+					silent();
+					Toast.makeText(getApplicationContext(), "Silent", Toast.LENGTH_SHORT).show();
+				}
+			}
+		});
+    }
+    
     private void addEvent() {
     	Intent intent = new Intent(Intent.ACTION_EDIT);
     	intent.setType("vnd.android.cursor.item/event");
@@ -107,22 +232,10 @@ public class AutoSilencerActivity extends Activity {
     	intent.putExtra("hasAlarm", 1); // Alarm: 0 - False, 1 - True
     	
     	try {
-    		startActivity(intent); 
+    		startActivityForResult(intent, RESULT_OK); 
     	} catch (Exception e) {
     		Toast.makeText(this.getApplicationContext(), "Sorry, no compatible calendar is found!", Toast.LENGTH_LONG).show();
     	}
-    }
-    
-    private void populateTextEvent() {
-//    	upcomingEventsText = (TextView) findViewById(R.id.text_event);
-//    	String l_str = 
-//    			"Title: " + nextEvent.title() + "\n" + 
-//				"Description: " + nextEvent.description() + "\n" + 
-//				"Event Location: " + nextEvent.location() + "\n" +
-//				"Start Time: " + getDateTimeStr(0) + "\n" +
-//				"End Time: " + getDateTimeStr(30) + "\n" +
-//				"All Day: " + nextEvent.isAllDay() + "\n";
-//    	upcomingEventsText.setText(l_str);
     }
     
     
@@ -163,12 +276,12 @@ public class AutoSilencerActivity extends Activity {
 	    	Uri.Builder builder = Uri.parse("content://com.android.calendar/instances/when").buildUpon();
     		long now = new Date().getTime();
 	    	//ContentUris.appendId(builder, now + (4 * DateUtils.WEEK_IN_MILLIS));
-	    	ContentUris.appendId(builder, now - DateUtils.WEEK_IN_MILLIS);
+	    	ContentUris.appendId(builder, now);
 			ContentUris.appendId(builder, now + DateUtils.WEEK_IN_MILLIS);
 	    	
 	    	String[] eventProjection = new String[]{"title", "dtstart", "dtend", "allDay"};
 	    	String eventSelection = "calendar_id=" + id;
-	    	String eventOrder = "dtstart ASC, dtend ASC";
+	    	String eventOrder = "dtstart DESC";
 	    	Cursor eventCursor = contentResolver.query(builder.build(), eventProjection, eventSelection, null, eventOrder);
 	    	
 	    	while (eventCursor.moveToNext())
@@ -181,19 +294,24 @@ public class AutoSilencerActivity extends Activity {
 	    		Event newEvent = new Event(title, begin, end);
 	    		
 	    		// Add the event to the HashSet
-	    		events.add(newEvent);
+	    		//if (begin.getTime() > now)
+	    			events.add(newEvent);
 	    	}
     	}
     	
-    	nextEvent = events.get(0);
+    	if (!events.isEmpty());
+    	{
+    		nextEvent = events.get(0);
+			System.out.println("Title: " + nextEvent.title());
+			System.out.println("Start: " + nextEvent.beginTime());
+	    	lastQueryAt = new Date();
+    	}
     }
-    
-    
     
     /*
 	 * Utility Methods
 	 */
-	private static final String DATE_TIME_FORMAT = "yyy MMM dd, HH:mm:ss";
+	private static final String DATE_TIME_FORMAT = "EEE, MMM dd, yyyy, HH:mm aaa";
 	
 	public static String getDateTimeStr(int p_delay_min) {
 		Calendar cal = Calendar.getInstance();

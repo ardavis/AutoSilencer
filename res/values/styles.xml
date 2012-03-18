@@ -2,21 +2,30 @@
 <resources>
     	
 	<style name="main_menu">
-	    <item name="android:layout_width">fill_parent</item>
-	    <item name="android:layout_height">55dip</item>
+	    <item name="android:layout_width">match_parent</item>
+	    <item name="android:layout_height">wrap_content</item>
 	    <item name="android:textColor">@color/menu_text_color</item>
 	    <item name="android:gravity">center</item>
-	    <item name="android:layout_marginLeft">45dip</item>
-	    <item name="android:layout_marginRight">45dip</item>
-	    <item name="android:textSize">30sp</item>
+	    <item name="android:layout_marginLeft">25dip</item>
+	    <item name="android:layout_marginRight">25dip</item>
+	    <item name="android:textSize">15sp</item>
 	    <item name="android:textStyle">bold</item>
 	    <item name="android:shadowColor">@color/menu_shadow_color</item>
 	    <item name="android:shadowDx">1</item>
 	    <item name="android:shadowDy">1</item>
-	    <item name="android:shadowRadius">4</item>       
+	    <item name="android:shadowRadius">4</item>    
 	</style>
 	
 	<style name="main_menu_btn" parent="main_menu">
-	    <item name="android:layout_marginTop">12dip</item>
+	    <item name="android:background">@drawable/blue_button_states</item>
+        <item name="android:layout_marginBottom">10dp</item>
+        <item name="android:layout_marginTop">10dp</item>
+        <item name="android:padding">10dp</item>
+	</style>
+	
+	<style name="enable_disable_btn" parent="main_menu">
+	    <item name="android:background">@drawable/toggle_state_background</item>
+	    <item name="android:padding">30dp</item>
+	    <item name="android:layout_marginBottom">30dp</item>
 	</style>
 </resources>

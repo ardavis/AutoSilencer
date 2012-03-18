@@ -20,7 +20,9 @@
     <color name="def_blue_gradientS">#449def</color>
     <color name="def_blue_gradientE">#2F6699</color>   
     
-    <color name="menu_text_color">#FFFFFF</color>
+    <color name="menu_text_color">@color/white</color>
     <color name="menu_shadow_color">#000000</color>
+    
+    <color name="white">#FFFFFF</color>
     
 </resources>

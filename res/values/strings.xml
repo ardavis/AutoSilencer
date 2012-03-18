@@ -3,12 +3,15 @@
 
     <string name="app_name">AutoSilencer</string>
     
-    <string name="currentState">Current State: -put here-</string>
-	<string name="nextEvent">Next Event: -put here-</string>
+    <string name="currentState">Current State:</string>
+	<string name="nextEvent">Next Event:</string>
 	<string name="viewUpEvents">View Upcoming Events</string>
 	<string name="addCalendarEvent">Add Calendar Event</string>
 	<string name="settings">Settings</string>
 	<string name="mainMenuTitle">AutoSilencer</string>
+	<string name="vibrate">Vibrate</string>
+	<string name="silent">Silent</string>
+	<string name="normal">Normal</string>
 	
 	<string-array name="pollingTimesArray">
         <item>1 Minute</item>
