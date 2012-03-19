@@ -1,8 +1,10 @@
 package edu.kettering.autosilencer;
 
+import java.io.Serializable;
+import java.lang.reflect.Array;
 import java.util.Date;
 
-public class Event {
+public class Event implements Serializable {
 	
 	// Properties
 	private String title;

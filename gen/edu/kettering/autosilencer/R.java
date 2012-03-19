@@ -36,24 +36,30 @@ public final class R {
         public static final int white=0x7f040012;
     }
     public static final class drawable {
-        public static final int auto_silencer_logo=0x7f020000;
-        public static final int blue_button_states=0x7f020001;
-        public static final int ic_launcher=0x7f020002;
-        public static final int title=0x7f020003;
-        public static final int toggle_state_background=0x7f020004;
-        public static final int toggle_state_text_color=0x7f020005;
+        public static final int as_icon=0x7f020000;
+        public static final int auto_silencer_logo=0x7f020001;
+        public static final int blue_button_states=0x7f020002;
+        public static final int ic_launcher=0x7f020003;
+        public static final int title=0x7f020004;
+        public static final int toggle_state_background=0x7f020005;
+        public static final int toggle_state_text_color=0x7f020006;
     }
     public static final class id {
         public static final int addCalendarEvent=0x7f080005;
         public static final int currentState=0x7f080001;
+        public static final int dayNumber=0x7f080007;
         public static final int enableDisable=0x7f080003;
+        public static final int eventTimes=0x7f08000a;
+        public static final int eventTitle=0x7f080009;
         public static final int mainMenuTitle=0x7f080000;
+        public static final int month=0x7f080008;
         public static final int nextEvent=0x7f080002;
         public static final int settings=0x7f080006;
         public static final int viewUpEvents=0x7f080004;
     }
     public static final class layout {
         public static final int main=0x7f030000;
+        public static final int upcoming_event_list_item_layout=0x7f030001;
     }
     public static final class string {
         public static final int addCalendarEvent=0x7f050004;

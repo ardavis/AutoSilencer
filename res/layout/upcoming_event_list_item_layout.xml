@@ -1,0 +1,63 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="?android:attr/listPreferredItemHeight"
+    
+    android:padding="10dip">
+    
+	<TextView
+	    android:id="@+id/dayNumber"
+	    android:layout_width="30dip"
+	    android:layout_height="26dip"
+	    android:layout_above="@+id/month"
+	    android:layout_alignParentLeft="true"
+	    android:layout_alignParentTop="true"
+	    android:ellipsize="marquee"
+	    android:singleLine="true"
+	    android:textSize="25dip"
+	    android:layout_marginRight="6dip"
+	    android:text="27" />
+
+    <TextView
+        android:id="@+id/month"
+        android:layout_width="30dip"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignWithParentIfMissing="true"       
+        android:gravity="center_vertical"
+        android:textSize="12dip"
+        android:layout_marginRight="6dip"
+        android:text="July" />
+
+    <TextView  
+        android:id="@+id/eventTitle"
+		android:gravity="center_vertical"
+        android:layout_width="fill_parent"
+        android:layout_height="26dip"
+        android:textSize="20dip" 
+        
+        android:layout_toRightOf="@+id/dayNumber"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentRight="true"
+        android:layout_above="@+id/eventTimes"
+        
+        android:singleLine="true"
+        android:ellipsize="marquee"
+        android:text="Title" />
+
+    <TextView
+        android:id="@+id/eventTimes"
+        
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_toRightOf="@+id/month"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        
+        android:layout_alignWithParentIfMissing="true"
+                
+        android:gravity="center_vertical"
+        android:text="Start and End Time" />
+
+</RelativeLayout>
