@@ -7,6 +7,7 @@ import java.util.Date;
 import java.util.HashSet;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -14,6 +15,7 @@ import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -25,6 +27,9 @@ import android.os.Handler;
 import android.preference.ListPreference;
 import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -107,9 +112,12 @@ public class AutoSilencerActivity extends Activity {
 	private Runnable handlerTask = new Runnable() {
 		@Override
 		public void run() {
-			checkForEvent();
-			updateNextEventLabel();
-			checkForEventComplete();
+			if (isEnabled)
+			{
+				checkForEvent();
+				updateNextEventLabel();
+				checkForEventComplete();
+			}
 		}
 	};
 	
@@ -120,9 +128,13 @@ public class AutoSilencerActivity extends Activity {
 			final String action = intent.getAction();
 			if (Intent.ACTION_TIME_TICK.equals(action))
 			{
-				handler.post(handlerTask);
-				minuteCount++;
-				minuteTracker();
+				if (isEnabled)
+				{
+					handler.post(handlerTask);
+					minuteCount++;
+					minuteTracker();
+				}
+				
 			}
 		}
 	};
@@ -342,8 +354,8 @@ public class AutoSilencerActivity extends Activity {
     @Override
     protected void onStop() {
     	super.onStop();
-    	stopCheckingForEvents();
-    	unregisterIntentFilters();
+    	//stopCheckingForEvents();
+    	//unregisterIntentFilters();
     	savePreferences();
     	//nm.cancelAll();
     }
@@ -432,6 +444,7 @@ public class AutoSilencerActivity extends Activity {
     public void stopCheckingForEvents()
     {
     	handler.removeCallbacks(handlerTask);
+    	clearEvents();
     }
     
     public void checkForEvent()
@@ -511,51 +524,7 @@ public class AutoSilencerActivity extends Activity {
     		System.out.println("No current event");
     	}
     }
-    
-//    private void populateCalendarSpinner() {
-//    	m_spinner_calendar = (Spinner) findViewById(R.id.spinner_calendar);
-//    	ArrayAdapter<?> l_arrayAdapter = new ArrayAdapter(this.getApplicationContext(), android.R.layout.simple_spinner_item, m_calendars);
-//    	l_arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-//    	
-//    	m_spinner_calendar.setAdapter(l_arrayAdapter);
-//    	m_spinner_calendar.setSelection(0);
-//    	m_spinner_calendar.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-//
-//			@Override
-//			public void onItemSelected(AdapterView<?> p_parent, View p_view, int p_pos, long p_id) {
-//				selectedCalendarId = m_calendars[(int)p_id].id;
-//				getUpcomingEvents(AutoSilencerActivity.this);
-//				Log.v("Calendar ID", selectedCalendarId);
-//			}
-//
-//			@Override
-//			public void onNothingSelected(AdapterView<?> arg0) {}
-//		});
-//    }
-    
-    private void getCalendars() {
-    	String[] l_projection = new String[]{"_id", "displayName"};
-    	Uri l_calendars = Uri.parse("content://com.android.calendar/calendars");
-    	
-    	Cursor l_managedCursor = this.managedQuery(l_calendars, l_projection, null, null, null); // All Calendars
-    	
-    	if (l_managedCursor.moveToFirst()) {
-    		m_calendars = new MyCalendar[l_managedCursor.getCount()];
-    		String l_calName;
-    		String l_calId;
-    		int l_cnt = 0;
-    		int l_nameCol = l_managedCursor.getColumnIndex(l_projection[1]);
-    		int l_idCol = l_managedCursor.getColumnIndex(l_projection[0]);
-    		
-    		do {
-    			l_calName = l_managedCursor.getString(l_nameCol);
-    			l_calId = l_managedCursor.getString(l_idCol);
-    			m_calendars[l_cnt] = new MyCalendar(l_calName, l_calId);
-    			++l_cnt;
-    		} while (l_managedCursor.moveToNext());
-    	}
-    }
-    
+
     public void setVolumeTo(Volume vol)
     {
     	switch (vol)
@@ -628,16 +597,11 @@ public class AutoSilencerActivity extends Activity {
 				if (toggleButton.isChecked()) {
 					isEnabled = true;
 					startCheckingForEvents();
-					// Testing
-					//setVibrate();
-					//Toast.makeText(getApplicationContext(), "Vibrate", Toast.LENGTH_SHORT).show();
 				}
 				else {
 					isEnabled = false;
 					stopCheckingForEvents();
-					// Testing
-					//setSilent();
-					//Toast.makeText(getApplicationContext(), "Silent", Toast.LENGTH_SHORT).show();
+					nextEventLabel.setText("Disabled");
 				}
 			}
 		});
@@ -646,7 +610,7 @@ public class AutoSilencerActivity extends Activity {
     private void addEvent() {
     	Intent intent = new Intent(Intent.ACTION_EDIT);
     	intent.setType("vnd.android.cursor.item/event");
-    	intent.putExtra("title", "Andy Test Event");
+    	intent.putExtra("title", "Test Event");
     	intent.putExtra("description", "This is a simple test for Calendar API");
     	intent.putExtra("eventLocation", "@home");
     	intent.putExtra("beginTime", System.currentTimeMillis() + 60*1000);
@@ -664,36 +628,12 @@ public class AutoSilencerActivity extends Activity {
     	}
     }
     
-    
-    
     private void clearEvents() 
     {
     	currentTime = new Date();
     	
     	events = new ArrayList<Event>();
     	nextEvent = null;
-    }
-    
-    private void removeExtraEvents()
-    {
-//		while ((nextEvent.beginTime().getHours() < currentTime.getHours()) ||
-//			(nextEvent.beginTime().getHours() == currentTime.getHours() &&
-//					nextEvent.beginTime().getMinutes() <= currentTime.getMinutes()))
-//		{
-//			if (!events.isEmpty())
-//			{
-//    			events.remove(0);
-//    			
-//    			if (!events.isEmpty())
-//    			{
-//    				nextEvent = events.get(0);
-//    			}
-//			}
-//			else
-//			{
-//				System.out.println("No extra events to remove!");
-//			}
-//		}
     }
     
     private void getUpcomingEvents(Context context) {
@@ -833,28 +773,53 @@ public class AutoSilencerActivity extends Activity {
 				break;
 		}
     }
+ 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) { 
+    	MenuInflater inflater = getMenuInflater(); 
+    	inflater.inflate(R.menu.main, menu);
+    	return true;
+    }
     
-	private static final String DATE_TIME_FORMAT = "EEE, MMM dd, yyyy, HH:mm aaa";
-	
-	public static String getDateTimeStr(int p_delay_min) {
-		Calendar cal = Calendar.getInstance();
-		SimpleDateFormat sdf = new SimpleDateFormat(DATE_TIME_FORMAT);
-		if (p_delay_min == 0) {
-			return sdf.format(cal.getTime());
-		} else {
-			Date l_time = cal.getTime();
-			l_time.setMinutes(l_time.getMinutes() + p_delay_min);
-			return sdf.format(l_time);
-		}
-	}
-	
-	public static String getDateTimeStr(String p_time_in_millis) {
-		SimpleDateFormat sdf = new SimpleDateFormat(DATE_TIME_FORMAT);
-		Date l_time = new Date(Long.parseLong(p_time_in_millis));
-		return sdf.format(l_time);
-	}
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+    	switch(item.getItemId()) {
+    	case R.id.menuAbout:
+    		
+    		Intent aboutIntent = new Intent(this, AboutActivity.class);
+    		startActivity(aboutIntent);
+    		return true;
+    	case R.id.menuExit:
+    		
+    		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    		builder.setMessage(R.string.confirm_exit)
+    				.setTitle(R.string.confirm_title)
+    				.setCancelable(true)
+    				.setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
+						
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							stopCheckingForEvents();
+					    	unregisterIntentFilters();
+							nm.cancelAll();
+							finish();
+						}
+					})
+					.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
+						
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							dialog.cancel();
+						}
+					});
+    		AlertDialog alert = builder.create();
+    		alert.show();
+    		return true;
+    	default:
+    		return super.onOptionsItemSelected(item);
+    	}
+    }
 }
-
 
 
 

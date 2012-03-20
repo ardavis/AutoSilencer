@@ -21,14 +21,15 @@
                     android:key="ignoreAllDayEvents" />
         </PreferenceCategory>
         <PreferenceCategory
-                android:title="Custom Events">
+                android:title="Custom Events"
+                android:enabled="false" >
 	        <Preference
 	        	android:title="Add Custom Event"
-	            android:summary="This works almost like a button"
+	            android:summary="Implemted in Future Version"
 	            android:key="addCustomEvent" />
 	        <Preference
               	android:title="View All Custom Events"
-              	android:summary="This works almost like a button"
+              	android:summary="Implemted in Future Version"
               	android:key="viewAllCustomEvents" />
         </PreferenceCategory>
 </PreferenceScreen>

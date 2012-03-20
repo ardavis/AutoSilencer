@@ -13,6 +13,25 @@
 	<string name="silent">Silent</string>
 	<string name="normal">Normal</string>
 	
+	<string name="developersLabel">Developers</string>
+	<string name="developers">Andrew Davis and Taylor Reeves</string>
+	
+	<string name="rolesLabel">Roles</string>
+	<string name="andyRoles">
+	    Andrew Davis was responsible for implementing the calendar functionality. This includes polling the calendar at regular intervals and checking for when the phone needs to change state. He was also in charge of hooking up the preferences to the application, allowing the user to keep their settings from a previous launch.
+	</string>
+	
+	<string name="taylorRoles">
+	    Taylor Reeves was responsible the layout and application design, this includes the preferences menu. He actively researched different possibilities for giving the user the most customization. Taylor also assisted with development of changing the phone\'s volume state.
+	</string>
+	
+	<string name="menu_about">About</string>
+    <string name="menu_exit">Exit</string>
+    <string name="confirm_exit">Are you sure you want to exit AutoSilencer?</string>
+    <string name="confirm_title">Exit Confirmation</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+	
 	<string-array name="pollingTimesArray">
         <item>1 Minute</item>
         <item>5 Minutes</item>
