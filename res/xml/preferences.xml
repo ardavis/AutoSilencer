@@ -17,7 +17,7 @@
                     android:entryValues="@array/eventVolume" />
                 <CheckBoxPreference 
                     android:title="Ignore All Day Events?" 
-                    android:summary="Not currently implemented."
+                    android:summary="Choose to ignore all day events or not"
                     android:key="ignoreAllDayEvents" />
         </PreferenceCategory>
         <PreferenceCategory

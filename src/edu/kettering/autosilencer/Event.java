@@ -25,6 +25,16 @@ public class Event implements Serializable {
 		this.location = "";
 	}
 	
+	public Event(String title, Date bTime, Date eTime, Boolean allDay)
+	{
+		this.title = title;
+		this.beginTime = bTime;
+		this.endTime = eTime;
+		this.isAllDay = allDay;
+		this.description = "";
+		this.location = "";
+	}
+	
 	public Event(String title, Date bTime, Date eTime, String desc, String loc, Boolean allDay)
 	{
 		this.title = title;

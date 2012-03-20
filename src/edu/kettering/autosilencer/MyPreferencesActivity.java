@@ -5,6 +5,7 @@ import java.util.prefs.Preferences;
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.CheckBoxPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.Preference.OnPreferenceChangeListener;
@@ -27,6 +28,7 @@ public class MyPreferencesActivity extends PreferenceActivity {
 	
 	ListPreference eventVolumePref;
 	ListPreference calendarPollingIntervalPref;
+	CheckBoxPreference prepareIgnoreAllDayEventsPref;
 	
 	@Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,6 +40,7 @@ public class MyPreferencesActivity extends PreferenceActivity {
             
             prepareEventVolumePref();
             prepareCalendarPollingIntervalPref();
+            prepareIgnoreAllDayEventsPref();
             
             
             // Get the custom preference
@@ -89,11 +92,41 @@ public class MyPreferencesActivity extends PreferenceActivity {
 			public boolean onPreferenceChange(Preference preference, Object newValue) {
 				System.out.println("Calendar Polling Interval: " + newValue);
 				calendarPollingIntervalPref.setSummary(newValue.toString());
-				editor.putString("calendarPollingIntervalPref", newValue.toString());
+				editor.putString("calendarPollingInterval", newValue.toString());
 				editor.commit();
 				return true;
 			}
 		});
+    }
+    
+    public void prepareIgnoreAllDayEventsPref()
+    {
+    	prepareIgnoreAllDayEventsPref = (CheckBoxPreference) findPreference("ignoreAllDayEvents");
+    	
+    	boolean ignoreAllDayEvents = settings.getBoolean("ignoreAllDayEvents", true);
+    	
+    	setIgnoreSummary(ignoreAllDayEvents);
+    	
+    	prepareIgnoreAllDayEventsPref.setOnPreferenceChangeListener(new OnPreferenceChangeListener() {
+			
+			@Override
+			public boolean onPreferenceChange(Preference preference, Object newValue) {
+				System.out.println("Ignore All Day Events: " + newValue);
+				
+				setIgnoreSummary(newValue);
+				editor.putBoolean("ignoreAllDayEvents", (Boolean) newValue);
+				editor.commit();
+				return true;
+			}
+		});
+    }
+    
+    public void setIgnoreSummary(Object value)
+    {
+    	if ((Boolean) value)
+    		prepareIgnoreAllDayEventsPref.setSummary("Ignored");
+    	else
+    		prepareIgnoreAllDayEventsPref.setSummary("Not Ignored");
     }
     
     

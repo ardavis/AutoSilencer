@@ -90,10 +90,11 @@ public class AutoSilencerActivity extends Activity {
 	private Date lastQueryAt;
 	private Date currentTime;
 	
+	// Preferences
 	private String eventVolume;
 	private String calendarPollingInterval;
+	private boolean ignoreAllDayEvents;
 	
-	// Preferences
 	private Volume volumeChoice = Volume.SILENT;
 	private CalendarPoll calendarPoll = CalendarPoll.FIFTEEN_MINUTES;
 	
@@ -162,12 +163,16 @@ public class AutoSilencerActivity extends Activity {
     public void restorePreferences()
     {
     	// Restore preferences
-        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
+        //SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
+        
+    	SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(AutoSilencerActivity.this);
         eventVolume = settings.getString("eventVolume", "Does not exist");
         calendarPollingInterval = settings.getString("calendarPollingInterval", "Does not exist");
+        ignoreAllDayEvents = settings.getBoolean("ignoreAllDayEvents", true);
         
         convertVolume();
         convertCalendarPollingInterval();
+        
 
     }
 
@@ -227,11 +232,12 @@ public class AutoSilencerActivity extends Activity {
     {
     	// Save user preferences. We need an Editor object to
         // make changes. All objects are from android.context.Context
-        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(AutoSilencerActivity.this);
         SharedPreferences.Editor editor = settings.edit();
         
         editor.putString("eventVolume", eventVolume);
         editor.putString("calendarPollingInterval", calendarPollingInterval);
+        editor.putBoolean("ignoreAllDayEvents", ignoreAllDayEvents);
 
         // Don't forget to commit your edits!!!
         editor.commit();
@@ -732,7 +738,7 @@ public class AutoSilencerActivity extends Activity {
 	    	ContentUris.appendId(builder, now);
 			ContentUris.appendId(builder, now + 4*DateUtils.WEEK_IN_MILLIS);
 	    	
-	    	String[] eventProjection = new String[]{"title", "dtstart", "dtend"};
+	    	String[] eventProjection = new String[]{"title", "dtstart", "dtend", "allDay"};
 	    	String eventSelection = "calendar_id=" + id;
 	    	String eventOrder = "dtstart ASC, dtend ASC";
 	    	Cursor eventCursor = contentResolver.query(builder.build(), eventProjection, eventSelection, null, eventOrder);
@@ -742,12 +748,24 @@ public class AutoSilencerActivity extends Activity {
 	    		final String title = eventCursor.getString(0);
 	    		final Date begin = new Date(eventCursor.getLong(1));
 	    		final Date end = new Date(eventCursor.getLong(2));
-	    		//final Boolean allDay = !eventCursor.getString(3).equals("0");
+	    		final Boolean allDay = !eventCursor.getString(3).equals("0");
 	    		
-	    		Event newEvent = new Event(title, begin, end);
-	    		
-	    		// Add the event to the ArrayList
-				events.add(newEvent);
+	    		if (ignoreAllDayEvents && !allDay)
+	    		{
+	    			Event newEvent = new Event(title, begin, end);
+	    			// Add the event to the ArrayList
+					events.add(newEvent);
+	    		}
+	    		else if (!ignoreAllDayEvents)
+	    		{
+	    			Event newEvent = new Event(title, begin, end, allDay);
+	    			// Add the event to the ArrayList
+					events.add(newEvent);
+	    		}
+	    		else
+	    		{
+	    			System.out.println("Possible error with Ignoring All Day Events");
+	    		}
 	    	}
     	}
     	
