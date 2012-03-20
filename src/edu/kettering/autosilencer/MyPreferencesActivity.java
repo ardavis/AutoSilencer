@@ -21,9 +21,12 @@ public class MyPreferencesActivity extends PreferenceActivity {
     String ringtonePreference;
     String secondEditTextPreference;
     String customPref;
-	ListPreference eventVolumePref;
+	
 	SharedPreferences settings;
 	SharedPreferences.Editor editor;
+	
+	ListPreference eventVolumePref;
+	ListPreference calendarPollingIntervalPref;
 	
 	@Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,6 +37,7 @@ public class MyPreferencesActivity extends PreferenceActivity {
             editor = settings.edit();
             
             prepareEventVolumePref();
+            prepareCalendarPollingIntervalPref();
             
             
             // Get the custom preference
@@ -66,9 +70,26 @@ public class MyPreferencesActivity extends PreferenceActivity {
 			@Override
 			public boolean onPreferenceChange(Preference preference, Object newValue) {
 				
-				System.out.println(newValue);
+				System.out.println("Event Volume: " + newValue);
 				eventVolumePref.setSummary(newValue.toString());
 				editor.putString("eventVolume", newValue.toString());
+				editor.commit();
+				return true;
+			}
+		});
+    }
+    
+    public void prepareCalendarPollingIntervalPref()
+    {
+    	calendarPollingIntervalPref = (ListPreference) findPreference("calendarPollingInterval");
+    	calendarPollingIntervalPref.setSummary(settings.getString("calendarPollingInterval", "No Value Set"));
+    	calendarPollingIntervalPref.setOnPreferenceChangeListener(new OnPreferenceChangeListener() {
+			
+			@Override
+			public boolean onPreferenceChange(Preference preference, Object newValue) {
+				System.out.println("Calendar Polling Interval: " + newValue);
+				calendarPollingIntervalPref.setSummary(newValue.toString());
+				editor.putString("calendarPollingIntervalPref", newValue.toString());
 				editor.commit();
 				return true;
 			}

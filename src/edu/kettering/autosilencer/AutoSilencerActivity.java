@@ -57,6 +57,22 @@ public class AutoSilencerActivity extends Activity {
 		VIBRATE, SILENT, NORMAL
 	}
 	
+	private enum CalendarPoll {
+		ONE_MINUTE(1), FIVE_MINUTES(5), TEN_MINUTES(10), 
+		FIFTEEN_MINUTES(15), HALF_HOUR(30), ONE_HOUR(60), 
+		THREE_HOURS(180);
+		
+		private int minutes;  
+		   
+	    private CalendarPoll(int minutes) {  
+	        this.minutes = minutes;  
+	    }  
+	   
+	    public int getMinutes() {  
+	        return minutes;  
+	    }  
+	}
+	
 	
 	public static TextView currentStateLabel;
 	private TextView nextEventLabel;
@@ -75,7 +91,14 @@ public class AutoSilencerActivity extends Activity {
 	private Date currentTime;
 	
 	private String eventVolume;
+	private String calendarPollingInterval;
+	
+	// Preferences
 	private Volume volumeChoice = Volume.SILENT;
+	private CalendarPoll calendarPoll = CalendarPoll.FIFTEEN_MINUTES;
+	
+	private int minuteCount = 0;
+	
 	private Volume volumeBeforeEvent;
 	
 	private NotificationManager nm;
@@ -97,8 +120,9 @@ public class AutoSilencerActivity extends Activity {
 			if (Intent.ACTION_TIME_TICK.equals(action))
 			{
 				handler.post(handlerTask);
+				minuteCount++;
+				minuteTracker();
 			}
-			
 		}
 	};
 	
@@ -140,7 +164,51 @@ public class AutoSilencerActivity extends Activity {
     	// Restore preferences
         SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
         eventVolume = settings.getString("eventVolume", "Does not exist");
+        calendarPollingInterval = settings.getString("calendarPollingInterval", "Does not exist");
         
+        convertVolume();
+        convertCalendarPollingInterval();
+
+    }
+
+    public void convertCalendarPollingInterval()
+    {
+    	if (calendarPollingInterval.equals("1 Minute"))
+    	{
+    		calendarPoll = CalendarPoll.ONE_MINUTE;
+    	}
+    	else if (calendarPollingInterval.equals("5 Minutes"))
+    	{
+    		calendarPoll = CalendarPoll.FIVE_MINUTES;
+    	}
+    	else if (calendarPollingInterval.equals("10 Minutes"))
+    	{
+    		calendarPoll = CalendarPoll.TEN_MINUTES;
+    	}
+    	else if (calendarPollingInterval.equals("15 Minutes"))
+    	{
+    		calendarPoll = CalendarPoll.FIFTEEN_MINUTES;
+    	}
+    	else if (calendarPollingInterval.equals("30 Minutes"))
+    	{
+    		calendarPoll = CalendarPoll.HALF_HOUR;
+    	}
+    	else if (calendarPollingInterval.equals("1 Hour"))
+    	{
+    		calendarPoll = CalendarPoll.ONE_HOUR;
+    	}
+    	else if (calendarPollingInterval.equals("3 Hours"))
+    	{
+    		calendarPoll = CalendarPoll.THREE_HOURS;
+    	}
+    	else
+    	{
+    		System.out.println("Problem with the Calendar Polling Interval");
+    	}
+    }
+    
+    public void convertVolume()
+    {
         if (eventVolume.equals("Vibrate"))
         {
         	volumeChoice = Volume.VIBRATE;
@@ -163,6 +231,7 @@ public class AutoSilencerActivity extends Activity {
         SharedPreferences.Editor editor = settings.edit();
         
         editor.putString("eventVolume", eventVolume);
+        editor.putString("calendarPollingInterval", calendarPollingInterval);
 
         // Don't forget to commit your edits!!!
         editor.commit();
@@ -691,9 +760,62 @@ public class AutoSilencerActivity extends Activity {
     	}
     }
     
-    /*
-	 * Utility Methods
-	 */
+    
+    public void minuteTracker()
+    {
+    	switch (calendarPoll)
+		{
+			case ONE_MINUTE:
+				if (minuteCount == 1)
+				{
+					getUpcomingEvents(this);
+				}
+				break;
+				
+			case FIVE_MINUTES:
+				if (minuteCount == 5)
+				{
+					getUpcomingEvents(this);
+				}
+				break;
+				
+			case TEN_MINUTES:
+				if (minuteCount == 10)
+				{
+					getUpcomingEvents(this);
+				}
+				break;
+				
+			case FIFTEEN_MINUTES:
+				if (minuteCount == 15)
+				{
+					getUpcomingEvents(this);
+				}
+				break;
+				
+			case HALF_HOUR:
+				if (minuteCount == 30)
+				{
+					getUpcomingEvents(this);
+				}
+				break;
+				
+			case ONE_HOUR:
+				if (minuteCount == 60)
+				{
+					getUpcomingEvents(this);
+				}
+				break;
+			
+			case THREE_HOURS:
+				if (minuteCount == 180)
+				{
+					getUpcomingEvents(this);
+				}
+				break;
+		}
+    }
+    
 	private static final String DATE_TIME_FORMAT = "EEE, MMM dd, yyyy, HH:mm aaa";
 	
 	public static String getDateTimeStr(int p_delay_min) {

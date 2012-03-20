@@ -7,14 +7,12 @@
                     android:title="Calendar Poling Interval"
                     android:summary="How often would you like to poll your calendar?"
                     android:key="calendarPollingInterval"
-                    android:defaultValue="digiGreen"
                     android:entries="@array/pollingTimesArray"
                     android:entryValues="@array/pollingTimesArray" />
                 <ListPreference
                     android:title="Event Volume"
                     android:summary="Set a default volume for events"
                     android:key="eventVolume"
-                    android:defaultValue="digiGreen"
                     android:entries="@array/eventVolume"
                     android:entryValues="@array/eventVolume" />
                 <CheckBoxPreference 
