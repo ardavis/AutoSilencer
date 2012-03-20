@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+        <PreferenceCategory
+                android:title="General Settings">
+
+            	<ListPreference
+                    android:title="Calendar Poling Interval"
+                    android:summary="How often would you like to poll your calendar?"
+                    android:key="calendarPollingInterval"
+                    android:defaultValue="digiGreen"
+                    android:entries="@array/pollingTimesArray"
+                    android:entryValues="@array/pollingTimesArray" />
+                <ListPreference
+                    android:title="Event Volume"
+                    android:summary="Set a default volume for events"
+                    android:key="eventVolume"
+                    android:defaultValue="digiGreen"
+                    android:entries="@array/eventVolume"
+                    android:entryValues="@array/eventVolume" />
+                <CheckBoxPreference 
+                    android:title="Ignore All Day Events?" 
+                    android:summary="Not currently implemented."
+                    android:key="ignoreAllDayEvents" />
+        </PreferenceCategory>
+        <PreferenceCategory
+                android:title="Custom Events">
+	        <Preference
+	        	android:title="Add Custom Event"
+	            android:summary="This works almost like a button"
+	            android:key="addCustomEvent" />
+	        <Preference
+              	android:title="View All Custom Events"
+              	android:summary="This works almost like a button"
+              	android:key="viewAllCustomEvents" />
+        </PreferenceCategory>
+</PreferenceScreen>

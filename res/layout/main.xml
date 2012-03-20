@@ -33,7 +33,7 @@
 	        android:layout_height="wrap_content"
 	        android:layout_weight="2"
 	        android:gravity="left"
-	        android:text="Vibrate" 
+	        android:text="@string/vibrate" 
 	        android:textSize="15dp"
 	        android:layout_marginLeft="15dp"
 	        android:textColor="@color/menu_text_color" />
@@ -44,7 +44,7 @@
    	    android:layout_width="match_parent"
    	    android:layout_height="wrap_content"
    	    android:orientation="horizontal"
-   	    android:layout_marginBottom="20dp" >
+   	    android:layout_marginBottom="30dp" >
    		
 	    <TextView
 	        android:layout_width="match_parent"
@@ -85,8 +85,13 @@
         style="@style/main_menu_btn" />
 	    
     <Button
-        android:id="@+id/settings"
+        android:id="@+id/prefs"
         android:text="@string/settings" 
         style="@style/main_menu_btn" />
+
+   <!--  <Spinner
+        android:id="@+id/spinner_calendar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" /> -->
 	
 </LinearLayout>

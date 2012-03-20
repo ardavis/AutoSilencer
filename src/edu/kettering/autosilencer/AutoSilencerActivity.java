@@ -7,27 +7,31 @@ import java.util.Date;
 import java.util.HashSet;
 
 import android.app.Activity;
-import android.media.AudioManager;
-import android.net.Uri;
-import android.os.Bundle;
-import android.os.Handler;
-import android.text.format.DateUtils;
-import android.util.Log;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.Spinner;
-import android.widget.TextView;
-import android.widget.Toast;
-import android.widget.ToggleButton;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.media.AudioManager;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Handler;
+import android.preference.ListPreference;
+import android.preference.PreferenceManager;
+import android.text.format.DateUtils;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
+import android.widget.Spinner;
+import android.widget.TextView;
+import android.widget.Toast;
+import android.widget.ToggleButton;
 
 
 
@@ -36,35 +40,52 @@ public class AutoSilencerActivity extends Activity {
 	// Finals
 	final boolean ENABLED  = true;
 	final boolean DISABLED = false;
-	
-	// Thread
-	private volatile Thread runner;
+	final int VIBRATE = 0;
+	final int SILENT = 1;
+	final int NORMAL = 2;
+	public static final String PREFS_NAME = "PrefFile";
 	
 	// Global Variables
 	SimpleDateFormat simpleDateFormat = new SimpleDateFormat("EEE, MMM dd hh:mm aaa");
+	SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm aaa");
 	
-	private TextView currentStateLabel;
+    private MyCalendar m_calendars[];
+    private Spinner m_spinner_calendar;
+    private String selectedCalendarId = "0";
+	
+	private enum Volume {
+		VIBRATE, SILENT, NORMAL
+	}
+	
+	
+	public static TextView currentStateLabel;
 	private TextView nextEventLabel;
 	
 	private ArrayList<Event> events = new ArrayList<Event>();
 	private Event nextEvent;
+	private Event currentEvent;
 	
 	private Button addButton;
 	private Button viewUpEvents;
+	private Button prefsButton;
 	
 	private ToggleButton toggleButton;
 	
 	private Date lastQueryAt;
+	private Date currentTime;
 	
-	private final static int INTERVAL = 1000 * 60;	// 10 seconds
+	private String eventVolume;
+	private Volume volumeChoice = Volume.SILENT;
+	private Volume volumeBeforeEvent;
 	
+	private NotificationManager nm;
 	private Handler handler;
-	
 	private Runnable handlerTask = new Runnable() {
 		@Override
 		public void run() {
 			checkForEvent();
 			updateNextEventLabel();
+			checkForEventComplete();
 		}
 	};
 	
@@ -73,8 +94,7 @@ public class AutoSilencerActivity extends Activity {
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			final String action = intent.getAction();
-			
-			if (Intent.ACTION_TIME_CHANGED.equals(action))
+			if (Intent.ACTION_TIME_TICK.equals(action))
 			{
 				handler.post(handlerTask);
 			}
@@ -82,18 +102,6 @@ public class AutoSilencerActivity extends Activity {
 		}
 	};
 	
-//	private Runnable handlerTask = new Runnable()
-//	{
-//		@Override
-//		public void run() {
-//			// Check if current time is equal to the next event time
-//			checkForEvent();
-//			updateNextEventLabel();
-//			//Toast.makeText(getApplicationContext(), "Is it time yet?", Toast.LENGTH_SHORT).show();
-//			handler.postDelayed(handlerTask, INTERVAL);
-//		}
-//	};
-//	
 	private Boolean isEnabled = true;
 	
 	// Audio Manager
@@ -105,32 +113,164 @@ public class AutoSilencerActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         
-        setupAudioManager();
-        setupInitialState();
-        
+        registerIntentFilters();
+        //getCalendars();
+        //populateCalendarSpinner();
         getUpcomingEvents(this);
+        
+        setupAudioManager();
+        updateCurrentStateLabel();
+        
+        restorePreferences();
+        
+        handler = new Handler();
+        startCheckingForEvents();
+        
+        setupInitialState();
+        setupNotification();
         
         prepareToggleButton();
         prepareUpcomingEventsButton();
         prepareAddButton();
+        prepareSettingsButton();
+    }
+   
+    public void restorePreferences()
+    {
+    	// Restore preferences
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
+        eventVolume = settings.getString("eventVolume", "Does not exist");
         
-        handler = new Handler();
+        if (eventVolume.equals("Vibrate"))
+        {
+        	volumeChoice = Volume.VIBRATE;
+        }
+        else if (eventVolume.equals("Silent"))
+        {
+        	volumeChoice = Volume.SILENT;
+        }
+        else 
+        {
+        	volumeChoice = Volume.NORMAL;
+        }
+    }
+    
+    public void savePreferences()
+    {
+    	// Save user preferences. We need an Editor object to
+        // make changes. All objects are from android.context.Context
+        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor editor = settings.edit();
         
-        startCheckingForEvents();
-          
+        editor.putString("eventVolume", eventVolume);
+
+        // Don't forget to commit your edits!!!
+        editor.commit();
+    }
+    
+    public void checkVolumeBeforeEvent()
+    {
+    	switch(am.getRingerMode())
+    	{
+    		case AudioManager.RINGER_MODE_VIBRATE:
+    			volumeBeforeEvent = Volume.VIBRATE;
+    			break;
+    		
+    		case AudioManager.RINGER_MODE_SILENT:
+    			volumeBeforeEvent = Volume.SILENT;
+    			break;
+    			
+    		default:
+    			volumeBeforeEvent = Volume.NORMAL;
+    			break;
+    		
+    	}
+    }
+    
+    public void registerIntentFilters()
+    {
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_TIME_TICK);
+        this.registerReceiver(intentReceiver, filter);
+        
+        SettingsContentObserver settingsContentObserver = new SettingsContentObserver( new Handler() ); 
+        settingsContentObserver.setContext(getApplicationContext());
+        this.getApplicationContext().getContentResolver().registerContentObserver( 
+        		android.provider.Settings.System.CONTENT_URI, true, 
+        		settingsContentObserver );
+
+    }
+    
+    public void unregisterIntentFilters()
+    {
+    	this.unregisterReceiver(intentReceiver);
+    }
+    
+    public void setupNotification() 
+    {
+    	int icon = R.drawable.as_icon;
+        CharSequence tickerText = "AutoSilencer is now running...";
+        long when = System.currentTimeMillis();
+        
+        if (nm == null)
+        	  nm = (NotificationManager)  getSystemService(NOTIFICATION_SERVICE);
+
+        Context context = getApplicationContext();
+        Notification notification = new Notification(icon, tickerText, when);
+        notification.flags |= Notification.FLAG_ONGOING_EVENT;
+        CharSequence contentTitle = "AutoSilencer";
+        CharSequence contentText = "Open AutoSilencer";
+        Intent notificationIntent = new Intent(this, AutoSilencerActivity.class);
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+        notification.setLatestEventInfo(context, contentTitle, contentText, contentIntent);
+        nm.notify(1, notification);
+    }
+    
+    public void eventTakingPlaceNotification()
+    {
+    	int icon = R.drawable.as_icon;
+    	CharSequence tickerText = nextEvent.title() + " has started.";
+        long when = System.currentTimeMillis();
+        
+        if (nm == null)
+        	  nm = (NotificationManager)  getSystemService(NOTIFICATION_SERVICE);
+
+        Context context = getApplicationContext();
+        Notification notification = new Notification(icon, tickerText, when);
+        notification.flags |= Notification.FLAG_AUTO_CANCEL;
+        CharSequence contentTitle = nextEvent.title() + " has started.";
+        CharSequence contentText = timeFormat.format(nextEvent.beginTime()) + " - " + timeFormat.format(nextEvent.endTime());
+        Intent notificationIntent = new Intent(this, AutoSilencerActivity.class);
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+        notification.setLatestEventInfo(context, contentTitle, contentText, contentIntent);
+        nm.notify(2, notification);
     }
     
     @Override
     protected void onRestart() {
         super.onRestart();
-        getUpcomingEvents(this);
+        //getUpcomingEvents(this);
+        //setupNotification();
+        restorePreferences();
+        registerIntentFilters();
         startCheckingForEvents();
+    }
+    
+    @Override
+    protected void onPause() {
+    	super.onPause();
+    	savePreferences();
     }
     
     @Override
     protected void onStop() {
     	super.onStop();
     	stopCheckingForEvents();
+    	unregisterIntentFilters();
+    	savePreferences();
+    	//nm.cancelAll();
     }
     
     public void prepareUpcomingEventsButton()
@@ -151,7 +291,27 @@ public class AutoSilencerActivity extends Activity {
 		});
     }
     
+    public void prepareSettingsButton()
+    {
+    	prefsButton = (Button) findViewById(R.id.prefs);
+    	prefsButton.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				Intent showPreferences = new Intent(getApplicationContext(), MyPreferencesActivity.class);
+				startActivity(showPreferences);
+			}
+		});
+    }
+    
     public void setupInitialState()
+    {	
+    	// Enabled or Disabled
+    	toggleButton = (ToggleButton) findViewById(R.id.enableDisable);
+    	toggleButton.setEnabled(isEnabled);
+    }
+    
+    public void updateCurrentStateLabel()
     {
     	// Current Volume State of the Device
     	currentStateLabel = (TextView) findViewById(R.id.currentState);
@@ -165,18 +325,11 @@ public class AutoSilencerActivity extends Activity {
     			currentStateLabel.setText(R.string.silent);
     			break;
     			
-    		case AudioManager.RINGER_MODE_NORMAL:
-    			currentStateLabel.setText(R.string.normal);
-    			break;
-    			
     		default:
+    			currentStateLabel.setText(R.string.normal);
     			break;
     		
     	}
-    	
-    	// Enabled or Disabled
-    	toggleButton = (ToggleButton) findViewById(R.id.enableDisable);
-    	toggleButton.setEnabled(isEnabled);
     }
     
     public void updateNextEventLabel()
@@ -184,7 +337,7 @@ public class AutoSilencerActivity extends Activity {
     	// Next Event
     	try {
     		nextEventLabel = (TextView) findViewById(R.id.nextEvent);
-    		nextEventLabel.setText(simpleDateFormat.format(nextEvent.beginTime()));
+    		nextEventLabel.setText(nextEvent.title() + "\n" + simpleDateFormat.format(nextEvent.beginTime()));
     	} catch (NullPointerException e) {
     		System.out.println("There are no events!");
     	}
@@ -197,6 +350,7 @@ public class AutoSilencerActivity extends Activity {
     
     public void startCheckingForEvents()
     {
+    	getUpcomingEvents(this);
     	handlerTask.run();
     }
     
@@ -207,32 +361,146 @@ public class AutoSilencerActivity extends Activity {
     
     public void checkForEvent()
     {
+    	currentTime = new Date();
     	try {
-    		Date currentTime = new Date();
-    		System.out.println("Current Time: " + currentTime.getTime());
-    		System.out.println("N Event Time: " + nextEvent.beginTime().getTime());
-	    	if (currentTime.getTime() >= nextEvent.beginTime().getTime())
+    		// Check if an event has started
+    		if (nextEvent.beginTime().getDate() == currentTime.getDate())
 	    	{
-	    		silent();
-	    		
-	    		while (nextEvent.beginTime().getTime() <= currentTime.getTime())
+	    		if ((nextEvent.beginTime().getHours() < currentTime.getHours()) ||
+	        			(nextEvent.beginTime().getHours() == currentTime.getHours() &&
+	        			nextEvent.beginTime().getMinutes() == currentTime.getMinutes()))
 	    		{
+	    			checkVolumeBeforeEvent();
+		    		eventTakingPlaceNotification();
+		    		
+		    		determineVolume();
+		    		
+		    		System.out.println("Event has started.");
+		    		currentEvent = nextEvent;
 		    		events.remove(0);
-		    		nextEvent = events.get(0);
-	    		}
-	    		Toast.makeText(getApplicationContext(), "EVENT!!", Toast.LENGTH_SHORT).show();
-	    	}
-	    	else
-	    	{
-				Toast.makeText(getApplicationContext(), "Next Event: " + simpleDateFormat.format(nextEvent.beginTime()), Toast.LENGTH_SHORT).show();
-	    	}
+		    		getUpcomingEvents(this);
+		    		
+		    		if (!events.isEmpty())
+		        	{
+		    			nextEvent = events.get(0);
+		    			nextEventLabel.setText("No events");
+		        	}
+		    	}
+		    	else
+		    	{
+					Toast.makeText(getApplicationContext(), "Next Event: " + simpleDateFormat.format(nextEvent.beginTime()), Toast.LENGTH_SHORT).show();
+		    	}
+    		}
     	} catch (Exception e) {
 			Toast.makeText(getApplicationContext(), "No events found within interval specified!", Toast.LENGTH_SHORT).show();
 		}
     }
     
+    public void determineVolume()
+    {
+    	
+    	switch(volumeChoice)
+    	{
+    		case VIBRATE:
+    			setVibrate();
+    			break;
+    			
+    		case SILENT:
+    			setSilent();
+    			break;
+    			
+    		case NORMAL:
+    			setNormal();
+    			break;
+    	}
+    }
+    
+    public void checkForEventComplete()
+    {
+    	currentTime = new Date();
+    	try
+    	{
+    		if (currentEvent.endTime().getDate() == currentTime.getDate())
+	    	{
+	    		if ((currentEvent.endTime().getHours() < currentTime.getHours()) ||
+	    			(currentEvent.endTime().getHours() == currentTime.getHours() &&
+	    					currentEvent.endTime().getMinutes() == currentTime.getMinutes()))
+	    		{
+	    			setVolumeTo(volumeBeforeEvent);
+	    			nm.cancel(2);
+	    			updateCurrentStateLabel();
+	    			currentEvent = null;
+	    		}
+    		}
+    	} catch (Exception e) {
+    		System.out.println("No current event");
+    	}
+    }
+    
+//    private void populateCalendarSpinner() {
+//    	m_spinner_calendar = (Spinner) findViewById(R.id.spinner_calendar);
+//    	ArrayAdapter<?> l_arrayAdapter = new ArrayAdapter(this.getApplicationContext(), android.R.layout.simple_spinner_item, m_calendars);
+//    	l_arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+//    	
+//    	m_spinner_calendar.setAdapter(l_arrayAdapter);
+//    	m_spinner_calendar.setSelection(0);
+//    	m_spinner_calendar.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+//
+//			@Override
+//			public void onItemSelected(AdapterView<?> p_parent, View p_view, int p_pos, long p_id) {
+//				selectedCalendarId = m_calendars[(int)p_id].id;
+//				getUpcomingEvents(AutoSilencerActivity.this);
+//				Log.v("Calendar ID", selectedCalendarId);
+//			}
+//
+//			@Override
+//			public void onNothingSelected(AdapterView<?> arg0) {}
+//		});
+//    }
+    
+    private void getCalendars() {
+    	String[] l_projection = new String[]{"_id", "displayName"};
+    	Uri l_calendars = Uri.parse("content://com.android.calendar/calendars");
+    	
+    	Cursor l_managedCursor = this.managedQuery(l_calendars, l_projection, null, null, null); // All Calendars
+    	
+    	if (l_managedCursor.moveToFirst()) {
+    		m_calendars = new MyCalendar[l_managedCursor.getCount()];
+    		String l_calName;
+    		String l_calId;
+    		int l_cnt = 0;
+    		int l_nameCol = l_managedCursor.getColumnIndex(l_projection[1]);
+    		int l_idCol = l_managedCursor.getColumnIndex(l_projection[0]);
+    		
+    		do {
+    			l_calName = l_managedCursor.getString(l_nameCol);
+    			l_calId = l_managedCursor.getString(l_idCol);
+    			m_calendars[l_cnt] = new MyCalendar(l_calName, l_calId);
+    			++l_cnt;
+    		} while (l_managedCursor.moveToNext());
+    	}
+    }
+    
+    public void setVolumeTo(Volume vol)
+    {
+    	switch (vol)
+    	{
+    		case VIBRATE:
+    			setVibrate();
+    			break;
+    			
+    		case SILENT:
+    			setSilent();
+    			break;
+    			
+    		case NORMAL:
+    			setNormal();
+    			break;
+    	}
+    }
+    
     // Set the phone to vibrate
-    public void vibrate()
+    public void setVibrate()
     {
     	am.setRingerMode(AudioManager.RINGER_MODE_VIBRATE);
     	currentStateLabel.setText(R.string.vibrate);
@@ -240,11 +508,24 @@ public class AutoSilencerActivity extends Activity {
     }
     
     // Set the phone to silent
-    public void silent()
+    public void setSilent()
     {
     	am.setRingerMode(AudioManager.RINGER_MODE_SILENT);
     	currentStateLabel.setText(R.string.silent);
     	// Change the text of the main menu current state
+    }
+    
+    public void setNormal()
+    {
+    	am.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+    	am.adjustVolume(AudioManager.ADJUST_LOWER, 0);
+    	currentStateLabel.setText(R.string.normal);
+    }
+    
+    // Set the phone to normal volume
+    public void normal()
+    {
+    	am.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
     }
     
     public void stopRepeatingTask()
@@ -273,15 +554,15 @@ public class AutoSilencerActivity extends Activity {
 					isEnabled = true;
 					startCheckingForEvents();
 					// Testing
-					vibrate();
-					Toast.makeText(getApplicationContext(), "Vibrate", Toast.LENGTH_SHORT).show();
+					//setVibrate();
+					//Toast.makeText(getApplicationContext(), "Vibrate", Toast.LENGTH_SHORT).show();
 				}
 				else {
 					isEnabled = false;
 					stopCheckingForEvents();
 					// Testing
-					silent();
-					Toast.makeText(getApplicationContext(), "Silent", Toast.LENGTH_SHORT).show();
+					//setSilent();
+					//Toast.makeText(getApplicationContext(), "Silent", Toast.LENGTH_SHORT).show();
 				}
 			}
 		});
@@ -290,16 +571,16 @@ public class AutoSilencerActivity extends Activity {
     private void addEvent() {
     	Intent intent = new Intent(Intent.ACTION_EDIT);
     	intent.setType("vnd.android.cursor.item/event");
-    	intent.putExtra("title", "Andy Calendar Tutorial Test");
+    	intent.putExtra("title", "Andy Test Event");
     	intent.putExtra("description", "This is a simple test for Calendar API");
     	intent.putExtra("eventLocation", "@home");
-    	intent.putExtra("beginTime", System.currentTimeMillis());
-    	intent.putExtra("endTime", System.currentTimeMillis() + 1800*1000);
+    	intent.putExtra("beginTime", System.currentTimeMillis() + 60*1000);
+    	intent.putExtra("endTime", System.currentTimeMillis() + 120*1000);
     	intent.putExtra("allDay", 0);	
     	intent.putExtra("eventStatus", 1); // Status: 0 - Tentative, 1 - Confirmed, 2 - Cancelled
     	intent.putExtra("visibility", 0); // Visibility: 0 - Default, 1 - Confidential, 2 - Private, 3 - Public
     	intent.putExtra("transparency", 0); // Transparency: 0 - Opaque (No Timing Conflict Allowed), 1 - Transparent (Allow Overlap of Scheduling)
-    	intent.putExtra("hasAlarm", 1); // Alarm: 0 - False, 1 - True
+    	intent.putExtra("hasAlarm", 0); // Alarm: 0 - False, 1 - True
     	
     	try {
     		startActivityForResult(intent, RESULT_OK); 
@@ -312,7 +593,32 @@ public class AutoSilencerActivity extends Activity {
     
     private void clearEvents() 
     {
+    	currentTime = new Date();
+    	
     	events = new ArrayList<Event>();
+    	nextEvent = null;
+    }
+    
+    private void removeExtraEvents()
+    {
+//		while ((nextEvent.beginTime().getHours() < currentTime.getHours()) ||
+//			(nextEvent.beginTime().getHours() == currentTime.getHours() &&
+//					nextEvent.beginTime().getMinutes() <= currentTime.getMinutes()))
+//		{
+//			if (!events.isEmpty())
+//			{
+//    			events.remove(0);
+//    			
+//    			if (!events.isEmpty())
+//    			{
+//    				nextEvent = events.get(0);
+//    			}
+//			}
+//			else
+//			{
+//				System.out.println("No extra events to remove!");
+//			}
+//		}
     }
     
     private void getUpcomingEvents(Context context) {
@@ -330,18 +636,22 @@ public class AutoSilencerActivity extends Activity {
     	final Cursor cursor = contentResolver.query(uri, projection, null, null, null);
     	
     	HashSet<String> calendarIds = new HashSet<String>();
-    	
-    	while (cursor.moveToNext())
+    	try
     	{
-    		final String _id = cursor.getString(0);
-    		final String displayName = cursor.getString(1);
-    		final Boolean selected = !cursor.getString(2).equals("0");
-    		
-    		System.out.println("ID: " + _id);
-    		System.out.println("Display Name: " + displayName);
-    		System.out.println("Selected: " + selected);
-    		
-    		calendarIds.add(_id);
+	    	while (cursor.moveToNext())
+	    	{
+	    		final String _id = cursor.getString(0);
+	    		final String displayName = cursor.getString(1);
+	    		final Boolean selected = !cursor.getString(2).equals("0");
+	    		
+	    		System.out.println("ID: " + _id);
+	    		System.out.println("Display Name: " + displayName);
+	    		System.out.println("Selected: " + selected);
+	    		
+	    		calendarIds.add(_id);
+	    	}
+    	} catch (Exception e) {
+    		System.out.println("No events for selected calendar");
     	}
 
     	// For each calendar, display all the events for the next week.
@@ -353,7 +663,7 @@ public class AutoSilencerActivity extends Activity {
 	    	ContentUris.appendId(builder, now);
 			ContentUris.appendId(builder, now + 4*DateUtils.WEEK_IN_MILLIS);
 	    	
-	    	String[] eventProjection = new String[]{"title", "dtstart", "dtend", "allDay"};
+	    	String[] eventProjection = new String[]{"title", "dtstart", "dtend"};
 	    	String eventSelection = "calendar_id=" + id;
 	    	String eventOrder = "dtstart ASC, dtend ASC";
 	    	Cursor eventCursor = contentResolver.query(builder.build(), eventProjection, eventSelection, null, eventOrder);
