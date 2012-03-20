@@ -4,7 +4,7 @@
                 android:title="General Settings">
 
             	<ListPreference
-                    android:title="Calendar Poling Interval"
+                    android:title="Calendar Polling Interval"
                     android:summary="How often would you like to poll your calendar?"
                     android:key="calendarPollingInterval"
                     android:entries="@array/pollingTimesArray"
